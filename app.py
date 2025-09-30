@@ -11,7 +11,12 @@ headers = {"Authorization": API_KEY}
 
 @app.route("/turno-update", methods=["POST"])
 def turno_update():
-    data = request.json or {}
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        data = {}
+
+    print("📩 Payload recebido:", data)
 
     # 🔑 Se for teste inicial do Monday (challenge)
     if "challenge" in data:
@@ -77,3 +82,4 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
