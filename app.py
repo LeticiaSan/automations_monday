@@ -10,7 +10,11 @@ headers = {"Authorization": API_KEY}
 
 @app.route("/turno-update", methods=["POST"])
 def turno_update():
-    data = request.json
+    data = request.json or {}
+
+    # ✅ Responde imediatamente se for apenas teste de conexão
+    if "event" not in data:
+        return {"status": "ok", "msg": "Teste de conexão recebido"}, 200
 
     try:
         item_id = data["event"]["pulseId"]
@@ -67,3 +71,4 @@ def home():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
