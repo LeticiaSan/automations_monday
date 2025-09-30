@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -12,7 +13,10 @@ headers = {"Authorization": API_KEY}
 def turno_update():
     data = request.json or {}
 
-    # ✅ Responde imediatamente se for apenas teste de conexão
+    # 🔑 Se for teste inicial do Monday (challenge)
+    if "challenge" in data:
+        return {"challenge": data["challenge"]}, 200
+
     if "event" not in data:
         return {"status": "ok", "msg": "Teste de conexão recebido"}, 200
 
@@ -70,5 +74,7 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
 
