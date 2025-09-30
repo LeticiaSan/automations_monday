@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 # 🔐 Configurações
 API_URL = "https://api.monday.com/v2"
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjQyNDM2NzQzMSwiYWFpIjoxMSwidWlkIjo2NjYzNDU4MiwiaWFkIjoiMjAyNC0xMC0xNlQxNDozNjo1Mi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjA1NTk3MTcsInJnbiI6InVzZTEifQ.-tL7KnWSMYNrJkZr_eK96abjaypzpjKcBoMe-qndKVk"
+API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjQyNDM2NzQzMSwiYWFpIjoxMSwidWlkIjo2NjYzNDU4MiwiaWFkIjoiMjAyNC0xMC0xNlQxNDozNjo1Mi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjA1NTk3MTcsInJnbiI6InVzZTEifQ.-tL7KnWSMYNrJkZr_eK96abjaypzpjKcBoMe-qndKVk"  # melhor deixar no ambiente
 headers = {"Authorization": API_KEY}
 
 @app.route("/turno-update", methods=["POST"])
@@ -28,19 +28,19 @@ def turno_update():
     try:
         item_id = data["event"]["pulseId"]
         board_id = data["event"]["boardId"]
-        turno = data["event"]["value"]["label"]["text"]
+        turno = data["event"]["value"]["label"]["text"]  # valor da coluna "Turno"
     except Exception as e:
         return jsonify({"erro": f"payload inesperado: {e}", "data": data}), 400
 
-    # Definir coluna do encarregado conforme turno
+    # 🔄 Mapear coluna correta do encarregado conforme turno
     if turno == "Manhã":
-        col_encarregado = "text_mkvwhks5"
+        col_encarregado = "text_mkvwhks5"   # Encarregado Manhã
     elif turno == "Noite":
-        col_encarregado = "text_mkw62geq"
+        col_encarregado = "text_mkw62geq"   # Encarregado Noite
     else:
         return jsonify({"status": "Turno sem ação"}), 200
 
-    # Buscar valor do encarregado
+    # 🔎 Buscar valor do encarregado (Manhã ou Noite)
     query = f"""
     query {{
       items(ids: {item_id}) {{
@@ -56,13 +56,13 @@ def turno_update():
     if not encarregado:
         return jsonify({"status": "Sem encarregado definido"}), 200
 
-    # Atualizar coluna principal
+    # ✏️ Atualizar "Encarregado Responsável"
     mutation = f"""
     mutation {{
       change_simple_column_value(
         board_id: {board_id},
         item_id: {item_id},
-        column_id: "text_mkw6zqbq",
+        column_id: "text_mkw6zqbq",  # Encarregado Responsável
         value: "{encarregado}"
       ) {{
         id
@@ -82,4 +82,3 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
