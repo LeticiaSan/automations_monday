@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
 import os
 
@@ -15,27 +15,27 @@ def turno_update():
 
     # 🔑 Se for teste inicial do Monday (challenge)
     if "challenge" in data:
-        return {"challenge": data["challenge"]}, 200
+        return jsonify({"challenge": data["challenge"]}), 200
 
     if "event" not in data:
-        return {"status": "ok", "msg": "Teste de conexão recebido"}, 200
+        return jsonify({"status": "ok", "msg": "Teste de conexão recebido"}), 200
 
     try:
         item_id = data["event"]["pulseId"]
         board_id = data["event"]["boardId"]
         turno = data["event"]["value"]["label"]["text"]
     except Exception as e:
-        return {"erro": f"payload inesperado: {e}", "data": data}, 400
+        return jsonify({"erro": f"payload inesperado: {e}", "data": data}), 400
 
     # Definir coluna do encarregado conforme turno
     if turno == "Manhã":
-        col_encarregado = "text_mkvwhks5"  # Encarregado Manhã
+        col_encarregado = "text_mkvwhks5"
     elif turno == "Noite":
-        col_encarregado = "text_mkw62geq"  # Encarregado Noite
+        col_encarregado = "text_mkw62geq"
     else:
-        return {"status": "Turno sem ação"}
+        return jsonify({"status": "Turno sem ação"}), 200
 
-    # Buscar o valor do encarregado correspondente
+    # Buscar valor do encarregado
     query = f"""
     query {{
       items(ids: {item_id}) {{
@@ -49,9 +49,9 @@ def turno_update():
     encarregado = r["data"]["items"][0]["column_values"][0]["text"]
 
     if not encarregado:
-        return {"status": "Sem encarregado definido"}, 200
+        return jsonify({"status": "Sem encarregado definido"}), 200
 
-    # Atualizar a coluna principal (Encarregado Responsável)
+    # Atualizar coluna principal
     mutation = f"""
     mutation {{
       change_simple_column_value(
@@ -65,7 +65,8 @@ def turno_update():
     }}
     """
     requests.post(API_URL, json={"query": mutation}, headers=headers)
-    return {"status": "ok", "turno": turno, "encarregado": encarregado}, 200
+
+    return jsonify({"status": "ok", "turno": turno, "encarregado": encarregado}), 200
 
 
 @app.route("/", methods=["GET"])
@@ -76,5 +77,3 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
