@@ -20,16 +20,20 @@ def turno_update():
 
     # 🔑 Se for teste inicial do Monday (challenge)
     if "challenge" in data:
+        print("⚡ Challenge recebido do Monday:", data["challenge"])
         return jsonify({"challenge": data["challenge"]}), 200
 
     if "event" not in data:
+        print("ℹ️ Evento sem 'event', provavelmente teste de conexão.")
         return jsonify({"status": "ok", "msg": "Teste de conexão recebido"}), 200
 
     try:
         item_id = data["event"]["pulseId"]
         board_id = data["event"]["boardId"]
         turno = data["event"]["value"]["label"]["text"]  # valor da coluna "Turno"
+        print(f"✅ Evento capturado: item={item_id}, board={board_id}, turno={turno}")
     except Exception as e:
+        print("❌ Erro ao extrair dados do payload:", e)
         return jsonify({"erro": f"payload inesperado: {e}", "data": data}), 400
 
     # 🔄 Mapear coluna correta do encarregado conforme turno
@@ -38,6 +42,7 @@ def turno_update():
     elif turno == "Noite":
         col_encarregado = "text_mkw62geq"   # Encarregado Noite
     else:
+        print("⚠️ Turno não é 'Manhã' ou 'Noite', nenhuma ação tomada.")
         return jsonify({"status": "Turno sem ação"}), 200
 
     # 🔎 Buscar valor do encarregado (Manhã ou Noite)
@@ -50,11 +55,22 @@ def turno_update():
       }}
     }}
     """
+    print("📤 Enviando query para buscar encarregado:", query)
+
     r = requests.post(API_URL, json={"query": query}, headers=headers).json()
-    encarregado = r["data"]["items"][0]["column_values"][0]["text"]
+    print("📥 Resposta da query:", r)
+
+    try:
+        encarregado = r["data"]["items"][0]["column_values"][0]["text"]
+    except Exception as e:
+        print("❌ Erro ao extrair encarregado da resposta:", e)
+        return jsonify({"erro": f"Falha ao pegar encarregado: {e}", "resposta": r}), 400
 
     if not encarregado:
+        print("⚠️ Nenhum encarregado definido na coluna:", col_encarregado)
         return jsonify({"status": "Sem encarregado definido"}), 200
+
+    print(f"👷 Encarregado encontrado: {encarregado}")
 
     # ✏️ Atualizar "Encarregado Responsável"
     mutation = f"""
@@ -69,7 +85,10 @@ def turno_update():
       }}
     }}
     """
-    requests.post(API_URL, json={"query": mutation}, headers=headers)
+    print("📤 Enviando mutation para atualizar encarregado:", mutation)
+
+    res = requests.post(API_URL, json={"query": mutation}, headers=headers).json()
+    print("📥 Resposta da mutation:", res)
 
     return jsonify({"status": "ok", "turno": turno, "encarregado": encarregado}), 200
 
