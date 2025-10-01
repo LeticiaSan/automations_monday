@@ -7,13 +7,12 @@ app = Flask(__name__)
 
 # 🔐 Configurações
 API_URL = "https://api.monday.com/v2"
-API_KEY = os.getenv("MONDAY_API_KEY", "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjQyNDM2NzQzMSwiYWFpIjoxMSwidWlkIjo2NjYzNDU4MiwiaWFkIjoiMjAyNC0xMC0xNlQxNDozNjo1Mi4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjA1NTk3MTcsInJnbiI6InVzZTEifQ.-tL7KnWSMYNrJkZr_eK96abjaypzpjKcBoMe-qndKVk")
+API_KEY = os.environ.get("MONDAY_API_KEY")
 headers = {"Authorization": API_KEY}
 
-# 📋 Configurar logging (vai para stdout e aparece no Render)
+# Configuração de logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
-
 
 @app.route("/turno-update", methods=["POST"])
 def turno_update():
@@ -26,26 +25,23 @@ def turno_update():
 
     # 🔑 Se for teste inicial do Monday (challenge)
     if "challenge" in data:
-        logger.info("⚡ Respondendo challenge: %s", data["challenge"])
         return jsonify({"challenge": data["challenge"]}), 200
 
     if "event" not in data:
-        logger.warning("⚠️ Requisição recebida sem 'event'. Data: %s", data)
         return jsonify({"status": "ok", "msg": "Teste de conexão recebido"}), 200
 
     try:
         item_id = data["event"]["pulseId"]
         board_id = data["event"]["boardId"]
-        turno = data["event"]["value"]["label"]["text"]  # valor da coluna "Turno"
+        turno = data["event"]["value"]["label"]["text"].strip().lower()  # normaliza para minúsculas
         logger.info("➡️ Evento: item_id=%s board_id=%s turno=%s", item_id, board_id, turno)
     except Exception as e:
-        logger.error("❌ Erro ao extrair dados do payload: %s", e, exc_info=True)
         return jsonify({"erro": f"payload inesperado: {e}", "data": data}), 400
 
     # 🔄 Mapear coluna correta do encarregado conforme turno
-    if turno == "Manhã":
+    if turno == "manhã":
         col_encarregado = "text_mkvwhks5"   # Encarregado Manhã
-    elif turno == "Noite":
+    elif turno == "noite":
         col_encarregado = "text_mkw62geq"   # Encarregado Noite
     else:
         logger.info("ℹ️ Turno sem ação: %s", turno)
@@ -61,14 +57,13 @@ def turno_update():
       }}
     }}
     """
-    logger.info("📤 Enviando query GraphQL: %s", query)
     r = requests.post(API_URL, json={"query": query}, headers=headers).json()
-    logger.info("📥 Resposta query: %s", r)
+    logger.info("📡 Resposta GraphQL (query encarregado): %s", r)
 
     encarregado = r["data"]["items"][0]["column_values"][0]["text"]
 
     if not encarregado:
-        logger.warning("⚠️ Nenhum encarregado definido para turno %s", turno)
+        logger.info("⚠️ Nenhum encarregado definido na coluna %s", col_encarregado)
         return jsonify({"status": "Sem encarregado definido"}), 200
 
     # ✏️ Atualizar "Encarregado Responsável"
@@ -77,16 +72,15 @@ def turno_update():
       change_simple_column_value(
         board_id: {board_id},
         item_id: {item_id},
-        column_id: "text_mkw6zqbq",
+        column_id: "text_mkw6zqbq",  # Encarregado Responsável
         value: "{encarregado}"
       ) {{
         id
       }}
     }}
     """
-    logger.info("📤 Enviando mutation GraphQL: %s", mutation)
-    resp_mut = requests.post(API_URL, json={"query": mutation}, headers=headers).json()
-    logger.info("📥 Resposta mutation: %s", resp_mut)
+    resp = requests.post(API_URL, json={"query": mutation}, headers=headers).json()
+    logger.info("✅ Mutação executada. Resposta: %s", resp)
 
     return jsonify({"status": "ok", "turno": turno, "encarregado": encarregado}), 200
 
