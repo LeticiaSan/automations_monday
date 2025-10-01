@@ -10,6 +10,7 @@ API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjQyNDM2NzQzMSwiYWFpIjoxMSwidWlkIjo2NjYz
 headers = {"Authorization": API_KEY}
 
 @app.route("/turno-update", methods=["POST"])
+print(">> chegou requisição turno-update!!")
 def turno_update():
     try:
         data = request.get_json(force=True, silent=True) or {}
@@ -101,3 +102,4 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
